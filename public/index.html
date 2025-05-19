@@ -1,63 +1,16 @@
-<!DOCTYPE html>
-<<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>AI Chatbot</title>
-  <style>
-    body { font-family: Arial; max-width: 600px; margin: 2rem auto; }
-    #chat { border: 1px solid #ccc; padding: 1rem; height: 300px; overflow-y: auto; }
-    .msg { margin-bottom: 1rem; }
-    .user { font-weight: bold; }
-  </style>
-</head>
-<body>
-  <h1>Chat with AI</h1>
-  <div id="chat"></div>
-  <form id="chat-form">
-    <input type="text" id="user-input" placeholder="Type a message..." required />
-    <button type="submit">Send</button>
-  </form>
+async function sendMessage(message) {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message })
+  });
 
-  <script>
-    const chat = document.getElementById('chat');
-    const form = document.getElementById('chat-form');
-    const input = document.getElementById('user-input');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const userMessage = input.value.trim();
-      if (!userMessage) return;
-
-      appendMessage('You', userMessage);
-      input.value = '';
-
-      try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: userMessage })
-        });
-
-        const data = await res.json();
-
-        if (data.reply) {
-          appendMessage('AI', data.reply);
-        } else {
-          appendMessage('AI', '[Error: No reply]');
-        }
-      } catch (err) {
-        appendMessage('AI', '[Error: Could not contact server]');
-      }
-    });
-
-    function appendMessage(sender, text) {
-      const msg = document.createElement('div');
-      msg.classList.add('msg');
-      msg.innerHTML = `<span class="${sender === 'You' ? 'user' : 'ai'}">${sender}:</span> ${text}`;
-      chat.appendChild(msg);
-      chat.scrollTop = chat.scrollHeight;
-    }
-  </script>
-</body>
-</html>
+  const data = await response.json();
+  if (data.reply) {
+    appendMessage('AI', data.reply);
+  } else if (data.error) {
+    appendMessage('AI', '[Error: ' + data.error + ']');
+  } else {
+    appendMessage('AI', '[Error: Unexpected response]');
+  }
+}
