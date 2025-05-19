@@ -1,46 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Chatbot</title>
-  <style>
-    body { font-family: sans-serif; padding: 2em; max-width: 600px; margin: auto; }
-    textarea { width: 100%; height: 100px; }
-    button { margin-top: 1em; padding: 0.5em 1em; }
-    #response { margin-top: 1em; white-space: pre-wrap; }
-  </style>
-</head>
-<body>
-  <h1>Chat with AI</h1>
-  <textarea id="prompt" placeholder="Type your message..."></textarea>
-  <br />
-  <button onclick="sendMessage()">Send</button>
-  <div id="response">Waiting for your input...</div>
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
-  <script>
-    async function sendMessage() {
-      const prompt = document.getElementById('prompt').value;
-      const responseEl = document.getElementById('response');
-      responseEl.textContent = 'Thinking...';
+  const { message } = req.body;
 
-      try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: prompt }),
-        });
+  if (!message) {
+    return res.status(400).json({ error: 'No message provided' });
+  }
 
-        const data = await res.json();
-        if (data.reply) {
-          responseEl.textContent = data.reply;
-        } else {
-          responseEl.textContent = 'Error: ' + (data.error || 'No reply');
-        }
-      } catch (e) {
-        responseEl.textContent = 'Error: ' + e.message;
-      }
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: message }],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      return res.status(500).json({ error: data.error.message });
     }
-  </script>
-</body>
-</html>
+
+    res.status(200).json({ reply: data.choices[0].message.content });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Something went wrong while contacting OpenAI' });
+  }
+}
